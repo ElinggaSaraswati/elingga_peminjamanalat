@@ -9,167 +9,213 @@ class AdminHomePage extends StatefulWidget {
 }
 
 class _AdminHomePageState extends State<AdminHomePage> {
-
   final supabase = Supabase.instance.client;
 
-  int totalAlat = 0;
-  int totalDipinjam = 0;
-  int totalTersedia = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    fetchData();
-  }
-
-  Future<void> fetchData() async {
-    final data = await supabase.from('alat').select();
-
-    totalAlat = data.length;
-    totalDipinjam =
-        data.where((e) => e['status'] == 'Dipinjam').length;
-    totalTersedia =
-        data.where((e) => e['status'] == 'Tersedia').length;
-
-    setState(() {});
-  }
+  // Data Dummy agar tampilan penuh saat di-run
+  int totalAlat = 50;
+  int totalDipinjam = 30;
+  int totalTersedia = 20;
 
   @override
   Widget build(BuildContext context) {
     final user = supabase.auth.currentUser;
 
     return Scaffold(
-      backgroundColor: const Color(0xff9bb6d9),
-
+      backgroundColor: const Color(0xffBBD7FF), // Biru latar belakang
       appBar: AppBar(
-        title: const Text("Beranda Admin"),
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
+        title: const Text(
+          "Beranda Admin",
+          style: TextStyle(color: Colors.black54, fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black54, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
-
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Column(
           children: [
-
-            /// HEADER USER
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(16),
-              ),
+            /// HEADER USER (PROFILE)
+            _buildNeoBox(
               child: Row(
                 children: [
-                  const CircleAvatar(
-                    radius: 28,
-                    child: Icon(Icons.person, size: 30),
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        "Hi, Selamat Datang Admin",
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      Text(user?.email ?? "-"),
-                    ],
-                  )
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            /// CARD INFO
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                infoCard("Total Alat", totalAlat),
-                infoCard("Terpinjam", totalDipinjam),
-                infoCard("Tersedia", totalTersedia),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-
-            /// GRAFIK BOX
-            Container(
-              height: 220,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Column(
-                children: [
-                  Text(
-                    "Grafik Peminjaman",
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 10),
+                  const Icon(Icons.account_circle, size: 70, color: Colors.black),
+                  const SizedBox(width: 15),
                   Expanded(
-                    child: Center(
-                      child: Text("Grafik di sini (opsional chart nanti)"),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "Hi, Selamat Datang Admin",
+                          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17),
+                        ),
+                        Text(
+                          user?.email ?? "saraswatielingga@gmail.com",
+                          style: const TextStyle(color: Colors.black, fontSize: 13, fontWeight: FontWeight.w500),
+                        ),
+                      ],
                     ),
                   )
                 ],
               ),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 25),
 
-            /// BOX KOSONG
-            Container(
-              height: 150,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(16),
+            /// ROW CARD INFO (TOTAL, TERPINJAM, TERSEDIA)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildStatCard("Total Alat", totalAlat),
+                _buildStatCard("Terpinjam", totalDipinjam),
+                _buildStatCard("Tersedia", totalTersedia),
+              ],
+            ),
+
+            const SizedBox(height: 25),
+
+            /// GRAFIK BOX
+            _buildNeoBox(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Grafik Peminjaman",
+                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                  ),
+                  const SizedBox(height: 25),
+                  SizedBox(
+                    height: 160,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        _buildBar(10, "Senin"),
+                        _buildBar(30, "Selasa"),
+                        _buildBar(20, "Rabu"),
+                        _buildBar(40, "Kamis"),
+                        _buildBar(50, "Jum'at"),
+                        _buildBar(40, "Sabtu"),
+                        _buildBar(20, "Minggu"),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Center(
+                    child: Text(
+                      "( Peminjaman Selama 1 Minggu )",
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                  )
+                ],
               ),
             ),
+
+            const SizedBox(height: 25),
+
+            /// BOX KOSONG BAWAH
+            _buildNeoBox(height: 160, child: const SizedBox.expand()),
+            const SizedBox(height: 30),
           ],
         ),
       ),
 
-      /// BOTTOM NAV
-      bottomNavigationBar: BottomNavigationBar(
-        selectedItemColor: Colors.black,
-        unselectedItemColor: Colors.black54,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Beranda"),
-          BottomNavigationBarItem(icon: Icon(Icons.people), label: "Pengguna"),
-          BottomNavigationBarItem(icon: Icon(Icons.laptop), label: "Alat"),
-          BottomNavigationBarItem(icon: Icon(Icons.receipt), label: "Riwayat"),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: "Pengaturan"),
-        ],
+      /// BOTTOM NAVIGATION BAR
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: Colors.black, width: 2)),
+        ),
+        child: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.white,
+          selectedItemColor: const Color(0xff1B607A),
+          unselectedItemColor: Colors.black,
+          showUnselectedLabels: true,
+          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home, size: 28), label: "Beranda"),
+            BottomNavigationBarItem(icon: Icon(Icons.groups_sharp, size: 28), label: "Pengguna"),
+            BottomNavigationBarItem(icon: Icon(Icons.computer, size: 28), label: "Alat"),
+            BottomNavigationBarItem(icon: Icon(Icons.description_outlined, size: 28), label: "Riwayat"),
+            BottomNavigationBarItem(icon: Icon(Icons.settings_outlined, size: 28), label: "Pengaturan"),
+          ],
+        ),
       ),
     );
   }
 
-  Widget infoCard(String title, int value) {
+  /// REUSABLE NEO-BRUTALISM BOX (Kunci kemiripan gambar)
+  Widget _buildNeoBox({required Widget child, double? height, EdgeInsets? padding}) {
     return Container(
-      width: 100,
-      padding: const EdgeInsets.all(12),
+      height: height,
+      padding: padding ?? const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(25),
+        border: Border.all(color: Colors.black, width: 2),
         boxShadow: const [
-          BoxShadow(color: Colors.black26, blurRadius: 3)
-        ],
-      ),
-      child: Column(
-        children: [
-          const Icon(Icons.laptop),
-          const SizedBox(height: 5),
-          Text(title, style: const TextStyle(fontSize: 12)),
-          Text(
-            value.toString(),
-            style: const TextStyle(
-                fontWeight: FontWeight.bold, fontSize: 18),
+          BoxShadow(
+            color: Colors.black26,
+            offset: Offset(4, 4), // Membuat bayangan tegas ke samping bawah
+            blurRadius: 0, 
           ),
         ],
       ),
+      child: child,
+    );
+  }
+
+  /// WIDGET STATISTIK KECIL
+  Widget _buildStatCard(String title, int value) {
+    return _buildNeoBox(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      child: SizedBox(
+        width: MediaQuery.of(context).size.width * 0.22, // Ukuran pas 3 kolom
+        child: Column(
+          children: [
+            Text(title, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.rectangle, size: 24, color: Colors.black),
+                const SizedBox(width: 5),
+                Text(
+                  value.toString(),
+                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 22),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// BAR GRAFIK HD
+  Widget _buildBar(double value, String day) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        Container(
+          height: value * 2.2, // Skala tinggi
+          width: 30,
+          decoration: BoxDecoration(
+            color: const Color(0xff1B607A),
+            border: Border.all(color: Colors.black, width: 1.5),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          day,
+          style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold),
+        ),
+      ],
     );
   }
 }

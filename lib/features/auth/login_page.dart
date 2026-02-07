@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import './admin/admin_home_page.dart'; // ⬅️ IMPORT BENAR
+import 'package:supabase_flutter/supabase_flutter.dart'; // Pastikan sudah install package ini
+import './admin/admin_home_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -10,22 +11,60 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   bool _obscurePassword = true;
+  bool _isLoading = false; // Status loading
 
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
+  // Fungsi Login dengan Supabase
+  Future<void> _login() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    // 1. Validasi Input Sederhana
+    if (email.isEmpty || password.isEmpty) {
+      _showSnackBar("Email dan sandi tidak boleh kosong", isError: true);
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      // 2. Proses Sign In ke Supabase
+      final response = await Supabase.instance.client.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+
+      if (response.user != null) {
+        if (!mounted) return;
+        
+        // Login Berhasil
+        _showSnackBar("Login Berhasil!");
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const AdminHomePage()),
+        );
+      }
+    } on AuthException catch (error) {
+      // Tangkap error spesifik dari Supabase (misal: user not found / wrong password)
+      _showSnackBar(error.message, isError: true);
+    } catch (error) {
+      // Tangkap error lainnya
+      _showSnackBar("Terjadi kesalahan yang tidak terduga", isError: true);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
-  void _login() {
-    // LANGSUNG KE BERANDA ADMIN
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const AdminHomePage()),
+  // Fungsi pembantu untuk menampilkan pesan
+  void _showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.redAccent : Colors.green,
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 
@@ -34,38 +73,36 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFBBD7FF),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          child: Center(
+        child: Center(
+          child: SingleChildScrollView(
             child: Column(
               children: [
-                const SizedBox(height: 80),
-
-                const Icon(
-                  Icons.inventory_2_rounded,
-                  size: 90,
-                  color: Colors.blueAccent,
-                ),
-
-                const SizedBox(height: 10),
-                const Text(
-                  "LabKomPINJAM",
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                const SizedBox(height: 30),
+                
+                /// LOGO
+                Container(
+                  height: 140,
+                  alignment: Alignment.center,
+                  child: Image.asset(
+                    'assets/images/logo.png',
+                    width: 170,
+                    height: 170,
+                    errorBuilder: (context, error, stackTrace) => 
+                        const Icon(Icons.image, size: 50, color: Colors.grey),
                   ),
                 ),
 
-                const SizedBox(height: 60),
+                const SizedBox(height: 10),
 
                 _buildLabel("Email"),
                 _buildInput(
                   controller: _emailController,
                   hint: "Masukkan Email Anda",
                   icon: Icons.email,
+                  keyboardType: TextInputType.emailAddress,
                 ),
 
-                const SizedBox(height: 25),
+                const SizedBox(height: 18),
 
                 _buildLabel("Sandi"),
                 _buildInput(
@@ -75,8 +112,9 @@ class _LoginPageState extends State<LoginPage> {
                   isPassword: true,
                 ),
 
-                const SizedBox(height: 50),
+                const SizedBox(height: 30),
 
+                // TOMBOL LOGIN
                 SizedBox(
                   width: 150,
                   height: 45,
@@ -90,13 +128,22 @@ class _LoginPageState extends State<LoginPage> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    onPressed: _login,
-                    child: const Text(
-                      "Masuk",
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
+                    // Disable klik jika sedang loading
+                    onPressed: _isLoading ? null : _login, 
+                    child: _isLoading 
+                      ? const SizedBox(
+                          height: 20, 
+                          width: 20, 
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black)
+                        )
+                      : const Text(
+                          "Masuk",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                   ),
                 ),
+
+                const SizedBox(height: 20),
               ],
             ),
           ),
@@ -123,6 +170,7 @@ class _LoginPageState extends State<LoginPage> {
     required String hint,
     required IconData icon,
     bool isPassword = false,
+    TextInputType keyboardType = TextInputType.text,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 6),
@@ -138,10 +186,12 @@ class _LoginPageState extends State<LoginPage> {
         child: TextField(
           controller: controller,
           obscureText: isPassword ? _obscurePassword : false,
+          keyboardType: keyboardType,
           decoration: InputDecoration(
             border: InputBorder.none,
             prefixIcon: Icon(icon, size: 20),
             hintText: hint,
+            contentPadding: const EdgeInsets.symmetric(vertical: 12),
             suffixIcon: isPassword
                 ? IconButton(
                     icon: Icon(
