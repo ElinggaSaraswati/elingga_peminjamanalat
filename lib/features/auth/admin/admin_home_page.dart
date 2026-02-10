@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'user_page.dart'; // pastikan file ini ada di folder yang sama
-import 'alat_page.dart'; // Import file AlatPage
+import 'user_page.dart';
+import 'alat_page.dart';
+import 'riwayat_page.dart'; // Import RiwayatPage di sini
 
 class AdminHomePage extends StatefulWidget {
   const AdminHomePage({super.key});
@@ -19,16 +20,14 @@ class _AdminHomePageState extends State<AdminHomePage> {
       _selectedIndex = index;
     });
 
+    // Logika Navigasi berdasarkan index
     if (index == 1) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const UserPage()),
-      );
-    } else if (index == 2) { // Tambahkan navigasi untuk icon Alat
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const AlatPage()),
-      );
+      Navigator.push(context, MaterialPageRoute(builder: (context) => const UserPage()));
+    } else if (index == 2) {
+      Navigator.push(context, MaterialPageRoute(builder: (context) => const AlatPage()));
+    } else if (index == 3) {
+      // Navigasi ke Halaman Riwayat
+      Navigator.push(context, MaterialPageRoute(builder: (context) => const RiwayatPage()));
     }
   }
 
@@ -37,20 +36,15 @@ class _AdminHomePageState extends State<AdminHomePage> {
     final user = supabase.auth.currentUser;
 
     return Scaffold(
-      backgroundColor: const Color(0xffBBD7FF), // Latar belakang biru muda
+      backgroundColor: const Color(0xffBBD7FF),
       appBar: AppBar(
-        // Menambahkan icon panah di sebelah kiri (leading)
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           "Beranda Admin",
-          style: TextStyle(
-            color: Colors.black, // Mengubah text menjadi hitam
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -59,7 +53,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Column(
           children: [
-            // 1. KARTU PROFIL ADMIN
+            // 1. Kartu Profil
             Container(
               padding: const EdgeInsets.all(15),
               decoration: BoxDecoration(
@@ -74,14 +68,8 @@ class _AdminHomePageState extends State<AdminHomePage> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        "Hi, Selamat Datang Admin",
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                      Text(
-                        user?.email ?? "saraswatilingga@gmail.com",
-                        style: const TextStyle(color: Colors.black87),
-                      ),
+                      const Text("Hi, Selamat Datang Admin", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      Text(user?.email ?? "saraswatilingga@gmail.com", style: const TextStyle(color: Colors.black87)),
                     ],
                   )
                 ],
@@ -89,7 +77,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
             ),
             const SizedBox(height: 25),
 
-            // 2. BARIS STATISTIK (Total, Terpinjam, Tersedia)
+            // 2. Statistik
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -100,7 +88,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
             ),
             const SizedBox(height: 25),
 
-            // 3. CONTAINER TEMPAT GRAFIK (Kosong sesuai permintaan)
+            // 3. Grafik Area
             Container(
               width: double.infinity,
               height: 220,
@@ -113,21 +101,14 @@ class _AdminHomePageState extends State<AdminHomePage> {
               child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    "Grafik Peminjaman",
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  Expanded(
-                    child: Center(
-                      child: Text("Area Grafik (Segera Hadir)"),
-                    ),
-                  ),
+                  Text("Grafik Peminjaman", style: TextStyle(fontWeight: FontWeight.bold)),
+                  Expanded(child: Center(child: Text("Area Grafik (Segera Hadir)"))),
                 ],
               ),
             ),
             const SizedBox(height: 25),
 
-            // 4. BOX KOSONG BAWAH
+            // 4. Box Kosong Tambahan
             Container(
               width: double.infinity,
               height: 200,
@@ -137,16 +118,14 @@ class _AdminHomePageState extends State<AdminHomePage> {
                 border: Border.all(color: Colors.black, width: 1.5),
               ),
             ),
-            const SizedBox(height: 100), // Padding bawah agar tidak tertutup navbar
+            const SizedBox(height: 100),
           ],
         ),
       ),
 
-      // BOTTOM NAVIGATION BAR
+      // Bottom Navigation Bar
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: Colors.black, width: 2)),
-        ),
+        decoration: const BoxDecoration(border: Border(top: BorderSide(color: Colors.black, width: 2))),
         child: BottomNavigationBar(
           currentIndex: _selectedIndex,
           onTap: _onItemTapped,
@@ -154,8 +133,6 @@ class _AdminHomePageState extends State<AdminHomePage> {
           backgroundColor: Colors.white,
           selectedItemColor: const Color(0xff1B607A),
           unselectedItemColor: Colors.black,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-          unselectedLabelStyle: const TextStyle(fontSize: 12),
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.home), label: "Beranda"),
             BottomNavigationBarItem(icon: Icon(Icons.groups), label: "Pengguna"),
@@ -168,7 +145,6 @@ class _AdminHomePageState extends State<AdminHomePage> {
     );
   }
 
-  // Widget pendukung untuk membuat kartu statistik kecil
   Widget _buildStatCard(String title, String count) {
     return Container(
       width: 105,
@@ -177,9 +153,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.black, width: 1.5),
-        boxShadow: const [
-          BoxShadow(color: Colors.black26, offset: Offset(2, 2), blurRadius: 2)
-        ],
+        boxShadow: const [BoxShadow(color: Colors.black26, offset: Offset(2, 2))],
       ),
       child: Column(
         children: [
@@ -188,9 +162,9 @@ class _AdminHomePageState extends State<AdminHomePage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.laptop_mac, size: 24),
+              const Icon(Icons.laptop_mac, size: 20),
               const SizedBox(width: 5),
-              Text(count, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Text(count, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ],
           )
         ],
