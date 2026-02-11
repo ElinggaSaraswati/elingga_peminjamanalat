@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 // Import halaman sesuai struktur folder Anda
-import 'admin/admin_home_page.dart';
-import 'petugas/petugas_home_page.dart'; 
-import 'peminjam/peminjam_home_page.dart'; 
+import '../admin/admin_home_page.dart';
+import '../petugas/petugas_home_page.dart'; 
+import '../peminjam/peminjam_home_page.dart'; 
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});

@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'user_add_edit.dart';
 
-// ==========================================
-// HALAMAN UTAMA: DAFTAR PENGGUNA (UserPage)
-// ==========================================
 class UserPage extends StatefulWidget {
   const UserPage({super.key});
 
@@ -14,15 +12,13 @@ class UserPage extends StatefulWidget {
 class _UserPageState extends State<UserPage> {
   final supabase = Supabase.instance.client;
 
-  // Stream Real-time untuk memanggil data dari tabel 'users'
   final Stream<List<Map<String, dynamic>>> _userStream =
       Supabase.instance.client.from('users').stream(primaryKey: ['id_user']);
 
-  // Logika Hapus Data
   Future<void> _deleteUser(int id) async {
     try {
       await supabase.from('users').delete().eq('id_user', id);
-      if (mounted) Navigator.pop(context);
+      if (mounted) Navigator.pop(context, true);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Gagal menghapus: $e")),
@@ -58,14 +54,18 @@ class _UserPageState extends State<UserPage> {
     );
   }
 
-  void _goToFormPage({bool isEdit = false, Map<String, dynamic>? userData}) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => UserFormPage(isEdit: isEdit, userData: userData),
-      ),
-    );
+void _goToFormPage({bool isEdit = false, Map<String, dynamic>? userData}) async {
+  final result = await Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => UserFormPage(isEdit: isEdit, userData: userData),
+    ),
+  );
+
+  if (result == true && mounted) {
+    setState(() {}); 
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -87,8 +87,6 @@ class _UserPageState extends State<UserPage> {
                 const SizedBox(height: 20),
                 _buildSearchBar(),
                 const SizedBox(height: 20),
-                
-                // StreamBuilder memanggil data pengguna secara otomatis
                 StreamBuilder<List<Map<String, dynamic>>>(
                   stream: _userStream,
                   builder: (context, snapshot) {
@@ -114,9 +112,7 @@ class _UserPageState extends State<UserPage> {
               ],
             ),
           ),
-          Positioned(
-            bottom: 30,
-            right: 25,
+          Positioned(bottom: 30, right: 25,
             child: GestureDetector(
               onTap: () => _goToFormPage(isEdit: false),
               child: _buildCircleButton(Icons.add),
@@ -259,226 +255,18 @@ class _UserPageState extends State<UserPage> {
     );
   }
 
-  Widget _buildCircleButton(IconData icon) {
+ Widget _buildCircleButton(IconData icon) {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Colors.white,
-        shape: BoxShape.circle,
+        shape: BoxShape.circle, 
         border: Border.all(color: Colors.black, width: 2),
-        boxShadow: const [BoxShadow(color: Colors.black26, offset: Offset(2, 2))],
+        boxShadow: const [
+          BoxShadow(color: Colors.black26, offset: Offset(2, 2))
+        ],
       ),
       child: Icon(icon, size: 35, color: Colors.black),
-    );
-  }
-}
-
-// ==========================================
-// HALAMAN FORM: TAMBAH & EDIT (UserFormPage)
-// ==========================================
-class UserFormPage extends StatefulWidget {
-  final bool isEdit;
-  final Map<String, dynamic>? userData;
-
-  const UserFormPage({super.key, required this.isEdit, this.userData});
-
-  @override
-  State<UserFormPage> createState() => _UserFormPageState();
-}
-
-class _UserFormPageState extends State<UserFormPage> {
-  final supabase = Supabase.instance.client;
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  bool _isPasswordObscured = true;
-  bool _isLoading = false;
-  String _selectedRole = "peminjam";
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.isEdit && widget.userData != null) {
-      _nameController.text = widget.userData!['nama'] ?? '';
-      _emailController.text = widget.userData!['username'] ?? '';
-      _selectedRole = (widget.userData!['role'] ?? 'peminjam').toString().toLowerCase();
-    }
-  }
-
-  Future<void> _handleSave() async {
-    if (_nameController.text.isEmpty || _emailController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Nama dan Email wajib diisi")));
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      if (widget.isEdit) {
-        // UPDATE: Mengubah data yang sudah ada di tabel users
-        await supabase.from('users').update({
-          'nama': _nameController.text,
-          'username': _emailController.text,
-          'role': _selectedRole,
-        }).eq('id_user', widget.userData!['id_user']);
-      } else {
-        // TAMBAH BARU: Sinkronisasi Authentication dan Database
-        if (_passwordController.text.isEmpty) {
-            throw "Sandi wajib diisi untuk pengguna baru";
-        }
-
-        // 1. Daftarkan ke Supabase Auth
-        final AuthResponse res = await supabase.auth.signUp(
-          email: _emailController.text.trim(),
-          password: _passwordController.text.trim(),
-        );
-
-        // 2. Jika Auth berhasil, ambil UID dan masukkan ke tabel users
-        if (res.user != null) {
-          await supabase.from('users').insert({
-            'auth_id': res.user!.id, // Sangat penting: Menghubungkan Auth dan Tabel Users
-            'nama': _nameController.text,
-            'username': _emailController.text,
-            'role': _selectedRole,
-          });
-        } else {
-            throw "Gagal mendaftarkan autentikasi";
-        }
-      }
-
-      if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(widget.isEdit ? "Berhasil diperbarui" : "Pengguna ditambahkan"))
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red));
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xffBBD7FF),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.black), onPressed: () => Navigator.pop(context)),
-        title: Text(widget.isEdit ? "Edit Pengguna" : "Tambah Pengguna Baru", 
-          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-      ),
-      body: _isLoading 
-      ? const Center(child: CircularProgressIndicator())
-      : SingleChildScrollView(
-        padding: const EdgeInsets.all(25),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(child: _buildProfileImage()),
-            const SizedBox(height: 30),
-            _buildFieldLabel("Nama"),
-            _buildTextField(_nameController, "Masukkan nama anda"),
-            _buildFieldLabel("Email/Username"),
-            _buildTextField(_emailController, "Masukkan email anda"),
-            if (!widget.isEdit) ...[
-              _buildFieldLabel("Sandi"),
-              _buildTextField(_passwordController, "Masukkan sandi anda", isPassword: true),
-            ],
-            _buildFieldLabel("Jenis akun"),
-            _buildDropdownField(),
-            const SizedBox(height: 40),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildFormButton("Batal", Colors.white, Colors.black, () => Navigator.pop(context)),
-                _buildFormButton(widget.isEdit ? "Simpan" : "Tambahkan Pengguna", 
-                  const Color(0xff1B607A), Colors.white, _handleSave),
-              ],
-            )
-          ],
-        ),
-      ),
-    );
-  }
-
-  // (Widget helpers tetap sama seperti kode asli Anda)
-  Widget _buildProfileImage() {
-    return Container(
-      width: 150, height: 150,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(25),
-        border: Border.all(color: Colors.black, width: 2),
-      ),
-      child: Icon(widget.isEdit ? Icons.camera_alt : Icons.person_outline, size: 80, color: Colors.black),
-    );
-  }
-
-  Widget _buildFieldLabel(String label) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8, top: 15),
-      child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-    );
-  }
-
-  Widget _buildTextField(TextEditingController controller, String hint, {bool isPassword = false}) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.black, width: 1.5),
-      ),
-      child: TextField(
-        controller: controller,
-        obscureText: isPassword ? _isPasswordObscured : false,
-        decoration: InputDecoration(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
-          hintText: hint,
-          border: InputBorder.none,
-          suffixIcon: isPassword 
-            ? IconButton(
-                icon: Icon(_isPasswordObscured ? Icons.visibility_off : Icons.visibility, color: Colors.black),
-                onPressed: () => setState(() => _isPasswordObscured = !_isPasswordObscured),
-              ) : null,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDropdownField() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 15),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.black, width: 1.5),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          isExpanded: true,
-          value: _selectedRole,
-          items: ["peminjam", "petugas", "admin"].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-          onChanged: (val) => setState(() => _selectedRole = val!),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFormButton(String text, Color bgColor, Color textColor, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: Colors.black, width: 1.5),
-        ),
-        child: Text(text, style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
-      ),
     );
   }
 }

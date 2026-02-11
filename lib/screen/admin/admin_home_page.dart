@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'user_page.dart';
-import 'alat_page.dart';
-import 'riwayat_page.dart'; // Import RiwayatPage di sini
+import 'user/user_page.dart';
+import 'alat/alat_page.dart';
+import 'peminjaman/riwayat_page.dart'; 
 
 class AdminHomePage extends StatefulWidget {
   const AdminHomePage({super.key});

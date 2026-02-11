@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:project_ukk/screen/admin/admin_home_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'features/auth/login_page.dart';
+import 'screen/splash/login_page.dart';
+import 'screen/admin/alat/alat_page.dart';
+import 'screen/peminjam/peminjam_home_page.dart';
 
 // ================= SUPABASE CONFIG =================
 const supabaseUrl = 'https://rezbnvoprehlynhybknc.supabase.co';
@@ -25,7 +28,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: LoginPage(), // ⬅️ HANYA LOGIN PAGE
+      home: PeminjamHomePage(), // ⬅️ HANYA LOGIN PAGE
     );
   }
 }
@@ -70,11 +73,6 @@ class Alat {
 
 
 
-// ===================================================
-// HALAMAN LIST ALAT
-// TIDAK DIPANGGIL OTOMATIS LAGI
-// HANYA AKAN DIPANGGIL JIKA ANDA NAVIGATE MANUAL
-// ===================================================
 class AlatListPage extends StatefulWidget {
   const AlatListPage({super.key});
 
