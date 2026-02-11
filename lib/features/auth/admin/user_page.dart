@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+// ==========================================
+// HALAMAN UTAMA: DAFTAR PENGGUNA (UserPage)
+// ==========================================
 class UserPage extends StatefulWidget {
   const UserPage({super.key});
 
@@ -11,15 +14,23 @@ class UserPage extends StatefulWidget {
 class _UserPageState extends State<UserPage> {
   final supabase = Supabase.instance.client;
 
-  // Data dummy sesuai gambar di Supabase
-  final List<Map<String, dynamic>> users = [
-    {"name": "rizalputra", "email": "rizalputra@gmail.com", "role": "petugas", "status": "online"},
-    {"name": "zalras", "email": "zalras@gmail.com", "role": "peminjam", "status": "offline"},
-  ];
+  // Stream Real-time untuk memanggil data dari tabel 'users'
+  final Stream<List<Map<String, dynamic>>> _userStream =
+      Supabase.instance.client.from('users').stream(primaryKey: ['id_user']);
 
-  // --- LOGIKA AKSI ---
+  // Logika Hapus Data
+  Future<void> _deleteUser(int id) async {
+    try {
+      await supabase.from('users').delete().eq('id_user', id);
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Gagal menghapus: $e")),
+      );
+    }
+  }
 
-  void _showDeleteDialog(String userName) {
+  void _showDeleteDialog(String userName, int userId) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -37,7 +48,7 @@ class _UserPageState extends State<UserPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildDialogButton("Ya", Colors.green, () => Navigator.pop(context)),
+                _buildDialogButton("Ya", Colors.green, () => _deleteUser(userId)),
                 _buildDialogButton("Tidak", const Color(0xff8B0000), () => Navigator.pop(context)),
               ],
             )
@@ -76,11 +87,28 @@ class _UserPageState extends State<UserPage> {
                 const SizedBox(height: 20),
                 _buildSearchBar(),
                 const SizedBox(height: 20),
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: users.length,
-                  itemBuilder: (context, index) => _buildUserCard(users[index]),
+                
+                // StreamBuilder memanggil data pengguna secara otomatis
+                StreamBuilder<List<Map<String, dynamic>>>(
+                  stream: _userStream,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return const Center(child: Text("Tidak ada pengguna di database"));
+                    }
+                    
+                    final usersData = snapshot.data!;
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: usersData.length,
+                      itemBuilder: (context, index) {
+                        return _buildUserCard(usersData[index]);
+                      },
+                    );
+                  },
                 ),
                 const SizedBox(height: 100),
               ],
@@ -99,8 +127,7 @@ class _UserPageState extends State<UserPage> {
     );
   }
 
-  // --- WIDGET HELPER ---
-
+  // --- WIDGET HELPERS ---
   Widget _buildAdminHeader() {
     return Container(
       width: double.infinity,
@@ -118,7 +145,7 @@ class _UserPageState extends State<UserPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text("Hi, Selamat Datang Admin", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              Text(supabase.auth.currentUser?.email ?? "saraswatilingga@gmail.com", style: const TextStyle(color: Colors.black87)),
+              Text(supabase.auth.currentUser?.email ?? "admin@email.com", style: const TextStyle(color: Colors.black87)),
             ],
           )
         ],
@@ -162,14 +189,14 @@ class _UserPageState extends State<UserPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(user['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                Text(user['email'], style: const TextStyle(fontSize: 12)),
+                Text(user['nama'] ?? '-', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                Text(user['username'] ?? '-', style: const TextStyle(fontSize: 12)),
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Text(user['role'], style: const TextStyle(fontSize: 12)),
+                    Text(user['role'] ?? '-', style: const TextStyle(fontSize: 12)),
                     const SizedBox(width: 8),
-                    _buildStatusPill(user['status']),
+                    _buildStatusPill("aktif"),
                   ],
                 ),
               ],
@@ -183,7 +210,7 @@ class _UserPageState extends State<UserPage> {
               ),
               const SizedBox(height: 8),
               GestureDetector(
-                onTap: () => _showDeleteDialog(user['name']),
+                onTap: () => _showDeleteDialog(user['nama'] ?? 'User', user['id_user']),
                 child: _buildActionButton(Icons.delete, "Hapus", const Color(0xff8B0000)),
               ),
             ],
@@ -246,8 +273,9 @@ class _UserPageState extends State<UserPage> {
   }
 }
 
-// --- HALAMAN FORM (TAMBAH & EDIT) ---
-
+// ==========================================
+// HALAMAN FORM: TAMBAH & EDIT (UserFormPage)
+// ==========================================
 class UserFormPage extends StatefulWidget {
   final bool isEdit;
   final Map<String, dynamic>? userData;
@@ -259,19 +287,75 @@ class UserFormPage extends StatefulWidget {
 }
 
 class _UserFormPageState extends State<UserFormPage> {
+  final supabase = Supabase.instance.client;
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isPasswordObscured = true;
-  String _selectedRole = "Peminjam";
+  bool _isLoading = false;
+  String _selectedRole = "peminjam";
 
   @override
   void initState() {
     super.initState();
     if (widget.isEdit && widget.userData != null) {
-      _nameController.text = widget.userData!['name'];
-      _emailController.text = widget.userData!['email'];
-      _selectedRole = widget.userData!['role'].toString().capitalize();
+      _nameController.text = widget.userData!['nama'] ?? '';
+      _emailController.text = widget.userData!['username'] ?? '';
+      _selectedRole = (widget.userData!['role'] ?? 'peminjam').toString().toLowerCase();
+    }
+  }
+
+  Future<void> _handleSave() async {
+    if (_nameController.text.isEmpty || _emailController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Nama dan Email wajib diisi")));
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      if (widget.isEdit) {
+        // UPDATE: Mengubah data yang sudah ada di tabel users
+        await supabase.from('users').update({
+          'nama': _nameController.text,
+          'username': _emailController.text,
+          'role': _selectedRole,
+        }).eq('id_user', widget.userData!['id_user']);
+      } else {
+        // TAMBAH BARU: Sinkronisasi Authentication dan Database
+        if (_passwordController.text.isEmpty) {
+            throw "Sandi wajib diisi untuk pengguna baru";
+        }
+
+        // 1. Daftarkan ke Supabase Auth
+        final AuthResponse res = await supabase.auth.signUp(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
+
+        // 2. Jika Auth berhasil, ambil UID dan masukkan ke tabel users
+        if (res.user != null) {
+          await supabase.from('users').insert({
+            'auth_id': res.user!.id, // Sangat penting: Menghubungkan Auth dan Tabel Users
+            'nama': _nameController.text,
+            'username': _emailController.text,
+            'role': _selectedRole,
+          });
+        } else {
+            throw "Gagal mendaftarkan autentikasi";
+        }
+      }
+
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(widget.isEdit ? "Berhasil diperbarui" : "Pengguna ditambahkan"))
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -286,21 +370,23 @@ class _UserFormPageState extends State<UserFormPage> {
         title: Text(widget.isEdit ? "Edit Pengguna" : "Tambah Pengguna Baru", 
           style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
       ),
-      body: SingleChildScrollView(
+      body: _isLoading 
+      ? const Center(child: CircularProgressIndicator())
+      : SingleChildScrollView(
         padding: const EdgeInsets.all(25),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(
-              child: _buildProfileImage(),
-            ),
+            Center(child: _buildProfileImage()),
             const SizedBox(height: 30),
             _buildFieldLabel("Nama"),
             _buildTextField(_nameController, "Masukkan nama anda"),
-            _buildFieldLabel("Email"),
+            _buildFieldLabel("Email/Username"),
             _buildTextField(_emailController, "Masukkan email anda"),
-            _buildFieldLabel("Sandi"),
-            _buildTextField(_passwordController, "Masukkan sandi anda", isPassword: true),
+            if (!widget.isEdit) ...[
+              _buildFieldLabel("Sandi"),
+              _buildTextField(_passwordController, "Masukkan sandi anda", isPassword: true),
+            ],
             _buildFieldLabel("Jenis akun"),
             _buildDropdownField(),
             const SizedBox(height: 40),
@@ -309,7 +395,7 @@ class _UserFormPageState extends State<UserFormPage> {
               children: [
                 _buildFormButton("Batal", Colors.white, Colors.black, () => Navigator.pop(context)),
                 _buildFormButton(widget.isEdit ? "Simpan" : "Tambahkan Pengguna", 
-                  const Color(0xff1B607A), Colors.white, () => Navigator.pop(context)),
+                  const Color(0xff1B607A), Colors.white, _handleSave),
               ],
             )
           ],
@@ -318,30 +404,16 @@ class _UserFormPageState extends State<UserFormPage> {
     );
   }
 
+  // (Widget helpers tetap sama seperti kode asli Anda)
   Widget _buildProfileImage() {
-    return Stack(
-      children: [
-        Container(
-          width: 150,
-          height: 150,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(25),
-            border: Border.all(color: Colors.black, width: 2),
-          ),
-          child: Icon(widget.isEdit ? Icons.camera_alt : Icons.person_outline, size: 80, color: Colors.black),
-        ),
-        if (widget.isEdit)
-          Positioned(
-            bottom: 5,
-            right: 5,
-            child: Container(
-              padding: const EdgeInsets.all(5),
-              decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, border: Border.all(color: Colors.black)),
-              child: const Icon(Icons.edit, size: 20),
-            ),
-          ),
-      ],
+    return Container(
+      width: 150, height: 150,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(25),
+        border: Border.all(color: Colors.black, width: 2),
+      ),
+      child: Icon(widget.isEdit ? Icons.camera_alt : Icons.person_outline, size: 80, color: Colors.black),
     );
   }
 
@@ -362,7 +434,6 @@ class _UserFormPageState extends State<UserFormPage> {
       child: TextField(
         controller: controller,
         obscureText: isPassword ? _isPasswordObscured : false,
-        style: const TextStyle(fontSize: 14),
         decoration: InputDecoration(
           contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
           hintText: hint,
@@ -371,8 +442,7 @@ class _UserFormPageState extends State<UserFormPage> {
             ? IconButton(
                 icon: Icon(_isPasswordObscured ? Icons.visibility_off : Icons.visibility, color: Colors.black),
                 onPressed: () => setState(() => _isPasswordObscured = !_isPasswordObscured),
-              ) 
-            : null,
+              ) : null,
         ),
       ),
     );
@@ -390,7 +460,7 @@ class _UserFormPageState extends State<UserFormPage> {
         child: DropdownButton<String>(
           isExpanded: true,
           value: _selectedRole,
-          items: ["Peminjam", "Petugas"].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+          items: ["peminjam", "petugas", "admin"].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
           onChanged: (val) => setState(() => _selectedRole = val!),
         ),
       ),
@@ -411,9 +481,4 @@ class _UserFormPageState extends State<UserFormPage> {
       ),
     );
   }
-}
-
-// Helper untuk kapitalisasi kata pertama
-extension StringExtension on String {
-  String capitalize() => this[0].toUpperCase() + substring(1);
 }
