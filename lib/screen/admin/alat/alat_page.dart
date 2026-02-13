@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'alat_add.dart';
 import 'kategori_page.dart';
 
@@ -10,71 +11,111 @@ class AlatPage extends StatefulWidget {
 }
 
 class _AlatPageState extends State<AlatPage> {
+  final supabase = Supabase.instance.client;
+
   String selectedCategory = "All";
   final List<String> categories = ["All", "Laptop", "Mouse", "Kamera", "Proyektor"];
 
-  String? tempStatus;
-  String? tempCategory;
+  List<Map<String, dynamic>> allItems = [];
+  bool isLoading = true;
 
-  final List<Map<String, String>> allItems = [
-    {"name": "Laptop", "desc": "HP 14S-CF0130TU SILVER", "cat": "Laptop", "img": "https://p-id.ipricegroup.com/uploaded_3160a28303f909180f12c6680a69a47a.jpg"},
-    {"name": "Mouse", "desc": "HP USB SCROLL", "cat": "Mouse", "img": "https://m.media-amazon.com/images/I/31697C6A0vL._AC_SY450_.jpg"},
-    {"name": "Camera", "desc": "CANON EOS R KIT 24", "cat": "Kamera", "img": "https://m.media-amazon.com/images/I/718n4oDah2L._AC_SL1500_.jpg"},
-    {"name": "Proyektor", "desc": "EPSON XGA 3 LCD", "cat": "Proyektor", "img": "https://m.media-amazon.com/images/I/51HkRWh80tL._AC_SL1000_.jpg"},
-  ];
+  @override
+  void initState() {
+    super.initState();
+    fetchAlat();
+  }
 
-  void _goToTambahAlat() {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => const AlatAddPage(),
-    ),
-  );
-}
+  // ================================
+  // FETCH DATA SUPABASE
+  // ================================
+  Future<void> fetchAlat() async {
+    final data = await supabase
+        .from('alat')
+        .select('''
+          id_alat,
+          nama_alat,
+          jumlah,
+          status,
+          gambar,
+          kategori(nama_kategori)
+        ''');
 
- void _showKategoriManager() {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => KategoriPage(categories: categories),
-    ),
-  );
-}
+    setState(() {
+      allItems = List<Map<String, dynamic>>.from(data);
+      isLoading = false;
+    });
+  }
 
+  void _goToTambahAlat() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const AlatAddPage(),
+      ),
+    );
+
+    fetchAlat(); // refresh setelah tambah
+  }
+
+  void _showKategoriManager() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => KategoriPage(categories: categories),
+      ),
+    );
+  }
 
   Widget _buildSearchField(String hint) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 15),
-    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(25), border: Border.all(color: Colors.black)),
-    child: TextField(
-      decoration: InputDecoration(
-        hintText: hint, 
-        border: InputBorder.none,
-        suffixIcon: const Icon(Icons.search, color: Colors.black), // Icon Hitam di Kanan
-      ),
-    ),
-  );
+        padding: const EdgeInsets.symmetric(horizontal: 15),
+        decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(25),
+            border: Border.all(color: Colors.black)),
+        child: TextField(
+          decoration: InputDecoration(
+            hintText: hint,
+            border: InputBorder.none,
+            suffixIcon: const Icon(Icons.search, color: Colors.black),
+          ),
+        ),
+      );
 
   Widget _buildLabel(String text) => Padding(
-    padding: const EdgeInsets.only(top: 15, bottom: 8),
-    child: Text(text, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black)),
-  );
+        padding: const EdgeInsets.only(top: 15, bottom: 8),
+        child: Text(text,
+            style: const TextStyle(
+                fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black)),
+      );
 
   Widget _buildTextField(String hint, {bool isNumber = false}) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 15),
-    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15), border: Border.all(color: Colors.black)),
-    child: TextField(
-      keyboardType: isNumber ? TextInputType.number : TextInputType.text,
-      decoration: InputDecoration(hintText: hint, border: InputBorder.none),
-    ),
-  );
+        padding: const EdgeInsets.symmetric(horizontal: 15),
+        decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: Colors.black)),
+        child: TextField(
+          keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+          decoration: InputDecoration(hintText: hint, border: InputBorder.none),
+        ),
+      );
 
-  Widget _buildDropdownImproved({required String? value, required String hint, required List<String> items, required ValueChanged<String?> onChanged}) {
+  Widget _buildDropdownImproved(
+      {required String? value,
+      required String hint,
+      required List<String> items,
+      required ValueChanged<String?> onChanged}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 15),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15), border: Border.all(color: Colors.black)),
+      decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: Colors.black)),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
-          value: value, hint: Text(hint), isExpanded: true,
+          value: value,
+          hint: Text(hint),
+          isExpanded: true,
           items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
           onChanged: onChanged,
         ),
@@ -82,19 +123,25 @@ class _AlatPageState extends State<AlatPage> {
     );
   }
 
-  // ===========================================================
-  // 4. MAIN BUILD (BERANDA ALAT)
-  // ===========================================================
   @override
   Widget build(BuildContext context) {
-    final filteredItems = selectedCategory == "All" ? allItems : allItems.where((item) => item['cat'] == selectedCategory).toList();
+    final filteredItems = selectedCategory == "All"
+        ? allItems
+        : allItems.where((item) {
+            final cat = item['kategori']?['nama_kategori'] ?? "";
+            return cat == selectedCategory;
+          }).toList();
 
     return Scaffold(
       backgroundColor: const Color(0xffBBD7FF),
       appBar: AppBar(
-        leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.black), onPressed: () => Navigator.pop(context)),
-        title: const Text("Beranda Alat", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.transparent, elevation: 0,
+        leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: () => Navigator.pop(context)),
+        title: const Text("Beranda Alat",
+            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
       ),
       body: Column(
         children: [
@@ -105,7 +152,8 @@ class _AlatPageState extends State<AlatPage> {
           SizedBox(
             height: 45,
             child: ListView.builder(
-              scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 15),
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 15),
               itemCount: categories.length,
               itemBuilder: (context, index) {
                 bool isSelected = selectedCategory == categories[index];
@@ -117,10 +165,14 @@ class _AlatPageState extends State<AlatPage> {
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       decoration: BoxDecoration(
                         color: isSelected ? const Color(0xff1B607A) : Colors.white,
-                        borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.black),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.black),
                       ),
                       child: Center(
-                        child: Text(categories[index], style: TextStyle(color: isSelected ? Colors.white : Colors.black, fontWeight: FontWeight.bold)),
+                        child: Text(categories[index],
+                            style: TextStyle(
+                                color: isSelected ? Colors.white : Colors.black,
+                                fontWeight: FontWeight.bold)),
                       ),
                     ),
                   ),
@@ -130,14 +182,22 @@ class _AlatPageState extends State<AlatPage> {
           ),
           const SizedBox(height: 20),
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              itemCount: filteredItems.length,
-              itemBuilder: (context, index) {
-                final item = filteredItems[index];
-                return _buildAlatCard(item['name']!, item['desc']!, item['img']!);
-              },
-            ),
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    itemCount: filteredItems.length,
+                    itemBuilder: (context, index) {
+                      final item = filteredItems[index];
+
+                      return _buildAlatCard(
+                        item['nama_alat'] ?? '',
+                        "Jumlah: ${item['jumlah'] ?? 0}",
+                        item['gambar'] ??
+                            "https://via.placeholder.com/150",
+                      );
+                    },
+                  ),
           ),
         ],
       ),
@@ -157,27 +217,38 @@ class _AlatPageState extends State<AlatPage> {
       margin: const EdgeInsets.only(bottom: 15),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white, borderRadius: BorderRadius.circular(20),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.black, width: 1.5),
         boxShadow: const [BoxShadow(color: Colors.black26, offset: Offset(3, 3))],
       ),
       child: Row(
         children: [
-          Image.network(imageUrl, width: 80, height: 60, fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, size: 50, color: Colors.grey),
+          Image.network(
+            imageUrl,
+            width: 80,
+            height: 60,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) =>
+                const Icon(Icons.broken_image, size: 50, color: Colors.grey),
           ),
           const SizedBox(width: 15),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                Text(title,
+                    style:
+                        const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 Text(subtitle, style: const TextStyle(fontSize: 10)),
                 const SizedBox(height: 5),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(color: const Color(0xff1B607A), borderRadius: BorderRadius.circular(10)),
-                  child: const Text("Tersedia", style: TextStyle(color: Colors.white, fontSize: 10)),
+                  decoration: BoxDecoration(
+                      color: const Color(0xff1B607A),
+                      borderRadius: BorderRadius.circular(10)),
+                  child: const Text("Tersedia",
+                      style: TextStyle(color: Colors.white, fontSize: 10)),
                 ),
               ],
             ),
@@ -188,18 +259,21 @@ class _AlatPageState extends State<AlatPage> {
   }
 
   Widget _buildSmallFab(IconData icon, String label) => Container(
-    width: 65, height: 65,
-    decoration: BoxDecoration(
-      color: Colors.white, borderRadius: BorderRadius.circular(18),
-      border: Border.all(color: Colors.black, width: 2),
-      boxShadow: const [BoxShadow(color: Colors.black26, offset: Offset(3, 3))],
-    ),
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(icon, color: Colors.black, size: 28),
-        Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-      ],
-    ),
-  );
+        width: 65,
+        height: 65,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.black, width: 2),
+          boxShadow: const [BoxShadow(color: Colors.black26, offset: Offset(3, 3))],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: Colors.black, size: 28),
+            Text(label,
+                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      );
 }

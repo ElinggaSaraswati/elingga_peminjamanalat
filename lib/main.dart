@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:project_ukk/screen/admin/admin_home_page.dart';
+import 'package:project_ukk/screen/petugas/petugas_home_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screen/splash/login_page.dart';
 import 'screen/admin/alat/alat_page.dart';
@@ -28,7 +29,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: PeminjamHomePage(), // ⬅️ HANYA LOGIN PAGE
+      home: LoginPage(), 
     );
   }
 }
@@ -38,9 +39,6 @@ class MyApp extends StatelessWidget {
 
 
 
-// ===================================================
-// MODEL ALAT (TIDAK DIHAPUS, TETAP TERHUBUNG SUPABASE)
-// ===================================================
 class Alat {
   final int id;
   final String namaAlat;

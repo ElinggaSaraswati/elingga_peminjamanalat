@@ -1,9 +1,48 @@
 import 'package:flutter/material.dart';
+import 'package:project_ukk/services/kategori_service.dart';
 
-class KategoriAddPage extends StatelessWidget {
+class KategoriAddPage extends StatefulWidget {
   final bool isEdit;
+  final int? idKategori;
+  final String? namaKategori;
 
-  const KategoriAddPage({super.key, this.isEdit = false});
+  const KategoriAddPage({
+    super.key,
+    this.isEdit = false,
+    this.idKategori,
+    this.namaKategori,
+  });
+
+  @override
+  State<KategoriAddPage> createState() => _KategoriAddPageState();
+}
+
+class _KategoriAddPageState extends State<KategoriAddPage> {
+  final kategoriService = KategoriService();
+  final TextEditingController namaController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+
+    if (widget.isEdit) {
+      namaController.text = widget.namaKategori ?? '';
+    }
+  }
+
+  Future<void> simpan() async {
+    final nama = namaController.text.trim();
+
+    if (nama.isEmpty) return;
+
+    if (widget.isEdit) {
+      await kategoriService.updateKategori(widget.idKategori!, nama);
+    } else {
+      await kategoriService.tambahKategori(nama);
+    }
+
+    Navigator.pop(context, true);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,8 +56,9 @@ class KategoriAddPage extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          isEdit ? "Edit Kategori" : "Tambah Kategori Baru",
-          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          widget.isEdit ? "Edit Kategori" : "Tambah Kategori Baru",
+          style:
+              const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
       ),
       body: Padding(
@@ -28,38 +68,24 @@ class KategoriAddPage extends StatelessWidget {
           children: [
             _label("Nama Kategori"),
             _textfield("Masukkan nama kategori"),
-            const SizedBox(height: 20),
-            _label("Gambar Kategori"),
-            Container(
-              width: double.infinity,
-              height: 180,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: Colors.black),
-              ),
-              child: const Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.image_outlined, size: 50, color: Colors.grey),
-                  SizedBox(height: 10),
-                  Text("Pilih Gambar", style: TextStyle(fontWeight: FontWeight.bold)),
-                ],
-              ),
-            ),
+        
             const Spacer(),
             SizedBox(
               width: double.infinity,
               height: 55,
               child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: simpan,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xff1B607A),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15)),
                 ),
                 child: Text(
-                  isEdit ? "SIMPAN PERUBAHAN" : "TAMBAHKAN KATEGORI",
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  widget.isEdit
+                      ? "SIMPAN PERUBAHAN"
+                      : "TAMBAHKAN KATEGORI",
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
                 ),
               ),
             )
@@ -82,6 +108,7 @@ class KategoriAddPage extends StatelessWidget {
           border: Border.all(color: Colors.black),
         ),
         child: TextField(
+          controller: namaController,
           decoration: InputDecoration(hintText: hint, border: InputBorder.none),
         ),
       );

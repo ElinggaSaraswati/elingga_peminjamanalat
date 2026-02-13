@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'user/user_page.dart';
 import 'alat/alat_page.dart';
 import 'peminjaman/riwayat_page.dart'; 
+import 'package:project_ukk/screen/splash/keluar_page.dart';
 
 class AdminHomePage extends StatefulWidget {
   const AdminHomePage({super.key});
@@ -25,9 +26,13 @@ class _AdminHomePageState extends State<AdminHomePage> {
       Navigator.push(context, MaterialPageRoute(builder: (context) => const UserPage()));
     } else if (index == 2) {
       Navigator.push(context, MaterialPageRoute(builder: (context) => const AlatPage()));
-    } else if (index == 3) {
+    // } else if (index == 3) {
+    //   // Navigasi ke Halaman Riwayat
+    //   Navigator.push(context, MaterialPageRoute(builder: (context) => const RiwayatPage()));
+    }
+    else if (index == 4) {
       // Navigasi ke Halaman Riwayat
-      Navigator.push(context, MaterialPageRoute(builder: (context) => const RiwayatPage()));
+      Navigator.push(context, MaterialPageRoute(builder: (context) => const PengaturanPage()));
     }
   }
 

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:project_ukk/services/kategori_service.dart';
 import 'kategori_add.dart';
 
 class KategoriPage extends StatefulWidget {
   final List<String> categories;
-
   const KategoriPage({super.key, required this.categories});
 
   @override
@@ -11,8 +11,26 @@ class KategoriPage extends StatefulWidget {
 }
 
 class _KategoriPageState extends State<KategoriPage> {
+  final kategoriService = KategoriService();
 
-  void _showDeleteDialog() {
+  List<Map<String, dynamic>> kategoriList = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchKategori();
+  }
+
+  Future<void> fetchKategori() async {
+    final data = await kategoriService.getKategori();
+    setState(() {
+      kategoriList = data;
+      isLoading = false;
+    });
+  }
+
+  void _showDeleteDialog(int id) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -20,22 +38,38 @@ class _KategoriPageState extends State<KategoriPage> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text("Hapus", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            const Text("Hapus",
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
-            const Text("apakah anda yakin menghapus kategori alat ini", textAlign: TextAlign.center),
+            const Text(
+              "apakah anda yakin menghapus kategori alat ini",
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green, shape: const StadiumBorder()),
-                  child: const Text("Ya", style: TextStyle(color: Colors.white)),
+                  onPressed: () async {
+                    await kategoriService.deleteKategori(id);
+                    Navigator.pop(context);
+                    fetchKategori();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    shape: const StadiumBorder(),
+                  ),
+                  child:
+                      const Text("Ya", style: TextStyle(color: Colors.white)),
                 ),
                 ElevatedButton(
                   onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: const StadiumBorder()),
-                  child: const Text("Tidak", style: TextStyle(color: Colors.white)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    shape: const StadiumBorder(),
+                  ),
+                  child:
+                      const Text("Tidak", style: TextStyle(color: Colors.white)),
                 ),
               ],
             )
@@ -45,26 +79,35 @@ class _KategoriPageState extends State<KategoriPage> {
     );
   }
 
-  void _goToForm({bool isEdit = false}) {
-    Navigator.push(
+  void _goToForm({bool isEdit = false, int? id, String? nama}) async {
+    await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => KategoriAddPage(isEdit: isEdit),
+        builder: (_) => KategoriAddPage(
+          isEdit: isEdit,
+          idKategori: id,
+          namaKategori: nama,
+        ),
       ),
     );
+
+    fetchKategori();
   }
 
   @override
   Widget build(BuildContext context) {
-    final list = widget.categories.where((c) => c != "All").toList();
+    final list = kategoriList;
 
     return Scaffold(
       backgroundColor: const Color(0xffBBD7FF),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.black), onPressed: () => Navigator.pop(context)),
-        title: const Text("Daftar Kategori", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: () => Navigator.pop(context)),
+        title: const Text("Daftar Kategori",
+            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
       ),
       body: Column(
         children: [
@@ -73,13 +116,19 @@ class _KategoriPageState extends State<KategoriPage> {
             child: _search(),
           ),
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              itemCount: list.length,
-              itemBuilder: (context, i) {
-                return _item(list[i]);
-              },
-            ),
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    itemCount: list.length,
+                    itemBuilder: (context, i) {
+                      final item = list[i];
+                      return _item(
+                        item['id_kategori'],
+                        item['nama_kategori'] ?? '',
+                      );
+                    },
+                  ),
           ),
         ],
       ),
@@ -93,13 +142,17 @@ class _KategoriPageState extends State<KategoriPage> {
 
   Widget _search() => Container(
         padding: const EdgeInsets.symmetric(horizontal: 15),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(25), border: Border.all(color: Colors.black)),
+        decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(25),
+            border: Border.all(color: Colors.black)),
         child: const TextField(
-          decoration: InputDecoration(hintText: "Cari kategori alat", border: InputBorder.none),
+          decoration: InputDecoration(
+              hintText: "Cari kategori alat", border: InputBorder.none),
         ),
       );
 
-  Widget _item(String name) {
+  Widget _item(int id, String name) {
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
       padding: const EdgeInsets.all(12),
@@ -110,12 +163,13 @@ class _KategoriPageState extends State<KategoriPage> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.image),
-          const SizedBox(width: 10),
-          Expanded(child: Text(name, style: const TextStyle(fontWeight: FontWeight.bold))),
-          _btn("Edit", Icons.edit, Colors.blue, () => _goToForm(isEdit: true)),
+          Expanded(
+              child: Text(name,
+                  style: const TextStyle(fontWeight: FontWeight.bold))),
+          _btn("Edit", Icons.edit, Colors.blue,
+              () => _goToForm(isEdit: true, id: id, nama: name)),
           const SizedBox(width: 5),
-          _btn("Hapus", Icons.delete, Colors.red, _showDeleteDialog),
+          _btn("Hapus", Icons.delete, Colors.red, () => _showDeleteDialog(id)),
         ],
       ),
     );
@@ -126,12 +180,15 @@ class _KategoriPageState extends State<KategoriPage> {
       onTap: tap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(10)),
+        decoration:
+            BoxDecoration(color: c, borderRadius: BorderRadius.circular(10)),
         child: Row(
           children: [
             Icon(i, size: 14, color: Colors.white),
             const SizedBox(width: 4),
-            Text(t, style: const TextStyle(color: Colors.white, fontSize: 10)),
+            Text(t,
+                style:
+                    const TextStyle(color: Colors.white, fontSize: 10)),
           ],
         ),
       ),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'alat_page_pinjam.dart';
+import 'list_peminjam.dart';
+import 'package:project_ukk/screen/splash/keluar_page.dart';
 
 class PeminjamHomePage extends StatefulWidget {
   const PeminjamHomePage({super.key});
@@ -18,11 +20,11 @@ class _PeminjamHomePageState extends State<PeminjamHomePage> {
   void initState() {
     super.initState();
     _pages = [
-      _buildBerandaContent(), // Index 0
-      const AlatPage(role: 'peminjam'), // Index 1: Halaman Alat
-      const Center(child: Text("Halaman Pinjam")),
+      _buildBerandaContent(), 
+      const AlatPage(role: 'peminjam'), 
+      const  PinjamPage(),
       const Center(child: Text("Halaman Kembali")),
-      const Center(child: Text("Halaman Pengaturan")),
+      const PengaturanPage(), 
     ];
   }
 
